@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Claude local settings
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+
+# Arduino build output / binaries (CI produces these)
+build/
+*.elf
+*.map

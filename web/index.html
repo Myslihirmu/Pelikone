@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pelikone – pelien päivitys</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+           max-width: 640px; margin: 0 auto; padding: 24px; line-height: 1.6; }
+    h1 { font-size: 1.6rem; margin-bottom: 0.2em; }
+    .lead { color: #555; margin-top: 0; }
+    .card { border: 1px solid #d0d7de; border-radius: 12px; padding: 20px; margin: 20px 0; }
+    ol { padding-left: 1.2em; }
+    li { margin: 6px 0; }
+    .btn { font-size: 1.1rem; padding: 12px 20px; border-radius: 10px;
+           border: 0; background: #11607a; color: #fff; cursor: pointer; }
+    .note { font-size: 0.9rem; color: #666; }
+    a { color: #11607a; }
+    code { background: #f0f3f5; padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>🎮 Pelikone – pelien päivitys</h1>
+  <p class="lead">Päivitä laitteen pelit suoraan selaimesta. Ei asennuksia.</p>
+
+  <div class="card">
+    <ol>
+      <li>Käytä <b>Chrome-</b> tai <b>Edge-selainta</b> (Safari ja Firefox eivät toimi).</li>
+      <li>Kytke laite tietokoneeseen <b>USB-kaapelilla</b> (datakaapeli, ei pelkkä laturikaapeli).</li>
+      <li>Paina alla olevaa painiketta ja valitse laitteen <b>sarjaportti</b> luettelosta.</li>
+      <li>Odota, että asennus valmistuu. Laite käynnistyy uudelleen ja uudet pelit ovat valmiina.</li>
+    </ol>
+
+    <p>
+      <esp-web-install-button manifest="./manifest.json">
+        <button class="btn" slot="activate">Asenna / päivitä pelit</button>
+        <span slot="unsupported">⚠️ Tämä selain ei tue asennusta. Avaa sivu Chrome- tai Edge-selaimella.</span>
+        <span slot="not-allowed">⚠️ Salli sarjaportin käyttö selaimessa ja yritä uudelleen.</span>
+      </esp-web-install-button>
+    </p>
+    <p class="note">Vinkki: jos porttia ei näy, kokeile toista USB-kaapelia tai toista USB-porttia.</p>
+  </div>
+
+  <p>📄 <a href="Pelikone_Kayttoohje.pdf">Lataa käyttöohje (PDF)</a></p>
+
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+</body>
+</html>

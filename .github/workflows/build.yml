@@ -1,0 +1,72 @@
+name: Build & deploy flasher
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install arduino-cli
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | BINDIR=/usr/local/bin sh
+          arduino-cli version
+
+      - name: Install ESP32 core
+        run: |
+          arduino-cli config init --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+
+      - name: Install libraries
+        run: |
+          arduino-cli lib install "Adafruit GFX Library" "Adafruit SSD1351 library" "U8g2_for_Adafruit_GFX"
+
+      - name: Compile firmware
+        run: |
+          FQBN=$(arduino-cli board listall | grep -iE "FireBeetle 2 ESP32-C6" | awk '{print $NF}' | head -1)
+          FQBN=${FQBN:-esp32:esp32:dfrobot_firebeetle2_esp32c6}
+          echo "Using FQBN: $FQBN"
+          arduino-cli compile --fqbn "$FQBN" --output-dir build_out .
+
+      - name: Assemble flasher site
+        run: |
+          mkdir -p site
+          cp web/index.html web/manifest.json site/
+          cp build_out/*.ino.bootloader.bin  site/bootloader.bin
+          cp build_out/*.ino.partitions.bin  site/partitions.bin
+          cp build_out/*.ino.bin             site/firmware.bin
+          cp "$(find "$HOME/.arduino15/packages/esp32" -name boot_app0.bin | head -1)" site/boot_app0.bin
+          python3 -m pip install --quiet reportlab
+          python3 tools/gen_manual.py
+          cp Pelikone_Kayttoohje.pdf site/
+          echo "Site contents:" && ls -la site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

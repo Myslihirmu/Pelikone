@@ -9,7 +9,8 @@
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
            max-width: 640px; margin: 0 auto; padding: 24px; line-height: 1.6; }
     h1 { font-size: 1.6rem; margin-bottom: 0.2em; }
-    .lead { color: #555; margin-top: 0; }
+    h2 { font-size: 1.2rem; margin: 0 0 0.4em; }
+    .lead { color: #666; margin-top: 0; }
     .card { border: 1px solid #d0d7de; border-radius: 12px; padding: 20px; margin: 20px 0; }
     ol { padding-left: 1.2em; }
     li { margin: 6px 0; }
@@ -17,19 +18,25 @@
            border: 0; background: #11607a; color: #fff; cursor: pointer; }
     .note { font-size: 0.9rem; color: #666; }
     a { color: #11607a; }
-    code { background: #f0f3f5; padding: 1px 5px; border-radius: 4px; }
+    /* rendered changelog */
+    .changelog h1 { font-size: 1.2rem; margin: 0 0 0.4em; }
+    .changelog h2 { font-size: 1.0rem; margin: 1em 0 0.3em; color: #11607a; }
+    .changelog ul { margin: 0.2em 0 0.7em; padding-left: 1.2em; }
+    .changelog li { margin: 3px 0; }
+    .changelog > p:first-child { color: #666; font-size: 0.9rem; }
   </style>
 </head>
 <body>
   <h1>🎮 Pelikone – pelien päivitys</h1>
-  <p class="lead">Päivitä laitteen pelit suoraan selaimesta. Ei asennuksia.</p>
+  <p class="lead">Tällä sivulla päivität laitteen pelit uusimpaan versioon. Ei asennuksia, ei ohjelmia – vain selain ja USB-kaapeli.</p>
 
   <div class="card">
+    <h2>Näin päivität</h2>
     <ol>
-      <li>Käytä <b>Chrome-</b> tai <b>Edge-selainta</b> (Safari ja Firefox eivät toimi).</li>
-      <li>Kytke laite tietokoneeseen <b>USB-kaapelilla</b> (datakaapeli, ei pelkkä laturikaapeli).</li>
-      <li>Paina alla olevaa painiketta ja valitse laitteen <b>sarjaportti</b> luettelosta.</li>
-      <li>Odota, että asennus valmistuu. Laite käynnistyy uudelleen ja uudet pelit ovat valmiina.</li>
+      <li>Avaa tämä sivu <b>Chrome-</b> tai <b>Edge-selaimella</b>. (Safari ja Firefox eivät valitettavasti toimi.)</li>
+      <li>Kytke laite tietokoneeseen <b>USB-kaapelilla</b>. Käytä datakaapelia – pelkkä latauskaapeli ei riitä.</li>
+      <li>Paina <b>“Asenna / päivitä pelit”</b> ja valitse avautuvasta luettelosta laitteen <b>portti</b> (nimessä lukee yleensä <code>usbmodem</code>).</li>
+      <li>Odota rauhassa, että palkki täyttyy. Laite käynnistyy itsestään uudelleen ja uudet pelit ovat valmiina. <b>Vanhat ennätykset säilyvät.</b></li>
     </ol>
 
     <p>
@@ -39,11 +46,23 @@
         <span slot="not-allowed">⚠️ Salli sarjaportin käyttö selaimessa ja yritä uudelleen.</span>
       </esp-web-install-button>
     </p>
-    <p class="note">Vinkki: jos porttia ei näy, kokeile toista USB-kaapelia tai toista USB-porttia.</p>
+    <p class="note">Jos porttia ei näy luettelossa: kokeile toista USB-kaapelia tai toista USB-porttia, ja varmista että laitteessa on virta päällä.</p>
   </div>
 
-  <p>📄 <a href="Pelikone_Kayttoohje.pdf">Lataa käyttöohje (PDF)</a></p>
+  <div class="card">
+    <h2>✨ Mitä uutta?</h2>
+    <div id="changelog" class="changelog">Ladataan…</div>
+  </div>
+
+  <p>📄 <a href="Pelikone_Kayttoohje.pdf">Pelien käyttöohje (PDF)</a></p>
 
   <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+  <script>
+    fetch('CHANGELOG.md', { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error(); return r.text(); })
+      .then(function (md) { document.getElementById('changelog').innerHTML = marked.parse(md); })
+      .catch(function () { document.getElementById('changelog').textContent = 'Muutoslokia ei juuri nyt voitu ladata.'; });
+  </script>
 </body>
 </html>

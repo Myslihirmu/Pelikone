@@ -57,6 +57,7 @@ jobs:
           python3 -m pip install --quiet reportlab
           python3 tools/gen_manual.py
           cp Pelikone_Kayttoohje.pdf site/
+          cp CHANGELOG.md site/
           echo "Site contents:" && ls -la site
 
       - name: Upload Pages artifact

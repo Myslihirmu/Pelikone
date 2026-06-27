@@ -20,6 +20,7 @@
 #define COMMS_CHANNEL      1
 #define COMMS_MAX_PAYLOAD  200
 #define COMMS_HELLO_MS     400      // broadcast HELLO interval while pairing
+#define COMMS_KEEPALIVE_MS 3000     // once paired, ping the partner this often
 #define COMMS_RESEND_MS    1500     // resend last payload until partner replies
 #define COMMS_TIMEOUT_MS   15000    // no contact for this long -> link lost
 
@@ -40,8 +41,8 @@ static uint8_t commsOwnMac[6];
 static uint8_t commsPartnerMac[6];
 static volatile bool    commsHaveCandidate = false;
 static uint8_t          commsCandidateMac[6];
-static volatile bool    commsReplyHello = false;
 static volatile unsigned long commsLastInbound = 0;
+static unsigned long    commsLastSent = 0;
 
 static portMUX_TYPE commsMux = portMUX_INITIALIZER_UNLOCKED;
 static volatile bool    commsInNew = false;
@@ -60,6 +61,7 @@ static void commsSendRaw(const uint8_t* mac, uint8_t type, const uint8_t* data, 
   frame[0] = type;
   if (data && len) memcpy(frame + 1, data, len);
   esp_now_send(mac, frame, 1 + len);
+  commsLastSent = millis();
 }
 
 static void commsAddPeer(const uint8_t* mac) {
@@ -82,12 +84,8 @@ static void commsOnRecv(const esp_now_recv_info_t* info, const uint8_t* data, in
   commsLinkLost = false;
 
   if (type == COMMS_T_HELLO) {
-    if (!commsPaired) {
-      if (!commsHaveCandidate) { memcpy(commsCandidateMac, mac, 6); commsHaveCandidate = true; }
-    } else if (memcmp(mac, commsPartnerMac, 6) == 0) {
-      commsReplyHello = true;   // partner still pairing -> answer from commsTick()
-    }
-    return;
+    if (!commsPaired && !commsHaveCandidate) { memcpy(commsCandidateMac, mac, 6); commsHaveCandidate = true; }
+    return;                     // (keepalive HELLO when paired just refreshed commsLastInbound above)
   }
 
   if (!commsPaired || memcmp(mac, commsPartnerMac, 6) != 0) return;
@@ -107,8 +105,8 @@ static void commsOnRecv(const esp_now_recv_info_t* info, const uint8_t* data, in
 // --- public API ---
 void commsBegin() {
   commsPaired = false; commsPartnerLeft = false; commsLinkLost = false; commsLobbyOwner = false;
-  commsHaveCandidate = false; commsReplyHello = false; commsInNew = false;
-  commsTxPending = false; commsTxLen = 0; commsLastHello = 0;
+  commsHaveCandidate = false; commsInNew = false;
+  commsTxPending = false; commsTxLen = 0; commsLastHello = 0; commsLastSent = 0;
 
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
@@ -174,8 +172,8 @@ void commsTick() {
     return;
   }
 
-  if (commsReplyHello) {
-    commsReplyHello = false;
+  // keepalive: also helps the partner finish pairing if its HELLO reached us first
+  if (now - commsLastSent >= COMMS_KEEPALIVE_MS) {
     commsSendRaw(commsPartnerMac, COMMS_T_HELLO, NULL, 0);
   }
 

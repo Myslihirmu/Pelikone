@@ -1,6 +1,7 @@
 #ifndef GAME_CHESS_H
 #define GAME_CHESS_H
 #include "Globals.h"
+#include "Comms.h"
 
 // 0 = Empty
 // White: 1=P, 2=N, 3=B, 4=R, 5=Q, 6=K
@@ -11,10 +12,25 @@ int chessCursorX = 0, chessCursorY = 0;
 int chessSelX = -1, chessSelY = -1;
 bool chessGameOver = false;
 
+// --- Phases / mode ---
+#define CH_MENU    0
+#define CH_PLAY    1
+#define CH_PAIRING 2
+#define CH_LOBBY   3
+#define CH_DISCONN 4
+#define CH_NET_STATE 1
+
+int  chPhase = CH_MENU;
+int  chMode  = 0;          // 0 = 2 players (one device), 1 = network
+int  chMenuSel = 0;
+int  chMyColor = 0;        // network: 0 white, 1 black
+bool chOwnerIsWhite = true;
+unsigned long chPairStart = 0;
+
 // Board Colors
 #define CHESS_LIGHT 0xF7DE
 #define CHESS_DARK  0x34A6
-#define CHESS_SEL   0xF800 
+#define CHESS_SEL   0xF800
 
 void initChessBoard() {
   int initial[8][8] = {
@@ -34,31 +50,88 @@ void initChessBoard() {
   }
 }
 
-// Forward declaration so setupChess can call it
-void drawChessBoard();
-
-void setupChess() {
-  initChessBoard();
-  chessTurn = 0;
-  chessCursorX = 0; chessCursorY = 0;
-  chessSelX = -1; chessSelY = -1;
-  chessGameOver = false;
-  
+// --- Network-mode screens (board is full-screen, so these replace it) ---
+void drawChessMenu() {
   tft.fillScreen(COLOR_BG);
-  drawChessBoard(); // This line makes the game appear instantly
+  u8g2_display.setForegroundColor(COLOR_GRAY);
+  u8g2_display.setCursor(2, 18); u8g2_display.print("SHAKKI");
+  tft.drawFastHLine(0, 24, 128, COLOR_GRAY);
+  const char* opt[2] = { "2 PELAAJAA", "2 LAITETTA" };
+  for (int i = 0; i < 2; i++) {
+    int y = 58 + i * 26;
+    if (i == chMenuSel) { tft.fillRect(0, y - 15, 128, 20, 0x18C3); u8g2_display.setForegroundColor(COLOR_GREEN); }
+    else u8g2_display.setForegroundColor(COLOR_TEXT);
+    u8g2_display.setCursor(6, y);
+    u8g2_display.print(i == chMenuSel ? ">" : " ");
+    u8g2_display.print(opt[i]);
+  }
+  u8g2_display.setForegroundColor(COLOR_GRAY);
+  u8g2_display.setCursor(2, 126); u8g2_display.print("ENTER = aloita");
+}
+
+void drawChessPairing() {
+  tft.fillScreen(COLOR_BG);
+  u8g2_display.setForegroundColor(COLOR_GRAY);
+  u8g2_display.setCursor(2, 18); u8g2_display.print("SHAKKI");
+  tft.drawFastHLine(0, 24, 128, COLOR_GRAY);
+  u8g2_display.setForegroundColor(COLOR_TEXT);
+  u8g2_display.setCursor(6, 58); u8g2_display.print("Etsitään toista");
+  u8g2_display.setCursor(6, 78); u8g2_display.print("laitetta...");
+  u8g2_display.setForegroundColor(COLOR_GRAY);
+  u8g2_display.setCursor(6, 116); u8g2_display.print("ESC = peruuta");
+}
+
+void drawChessLobby() {
+  tft.fillScreen(COLOR_BG);
+  u8g2_display.setForegroundColor(COLOR_GRAY);
+  u8g2_display.setCursor(2, 18); u8g2_display.print("SHAKKI");
+  tft.drawFastHLine(0, 24, 128, COLOR_GRAY);
+  if (commsLobbyOwner) {
+    u8g2_display.setForegroundColor(COLOR_TEXT);
+    u8g2_display.setCursor(6, 44); u8g2_display.print("Kumpi olet?");
+    const char* opt[2] = { "VALKOINEN", "MUSTA" };
+    for (int i = 0; i < 2; i++) {
+      int y = 70 + i * 22;
+      if (i == chMenuSel) { tft.fillRect(0, y - 15, 128, 20, 0x18C3); u8g2_display.setForegroundColor(COLOR_GREEN); }
+      else u8g2_display.setForegroundColor(COLOR_TEXT);
+      u8g2_display.setCursor(6, y);
+      u8g2_display.print(i == chMenuSel ? ">" : " ");
+      u8g2_display.print(opt[i]);
+    }
+    u8g2_display.setForegroundColor(COLOR_GRAY);
+    u8g2_display.setCursor(2, 124); u8g2_display.print("Valkoinen aloittaa");
+  } else {
+    u8g2_display.setForegroundColor(COLOR_GREEN);
+    u8g2_display.setCursor(6, 56); u8g2_display.print("Yhdistetty!");
+    u8g2_display.setForegroundColor(COLOR_TEXT);
+    u8g2_display.setCursor(6, 84); u8g2_display.print("Toinen valitsee");
+    u8g2_display.setCursor(6, 104); u8g2_display.print("värin...");
+  }
+}
+
+void drawChessDisconn() {
+  tft.fillRect(14, 40, 100, 48, COLOR_POPUP_BG);
+  tft.drawRect(14, 40, 100, 48, COLOR_BORDER);
+  u8g2_display.setForegroundColor(COLOR_RED);
+  if (commsPartnerLeft) { u8g2_display.setCursor(24, 60); u8g2_display.print("Vastustaja"); u8g2_display.setCursor(24, 78); u8g2_display.print("poistui"); }
+  else                  { u8g2_display.setCursor(24, 60); u8g2_display.print("Yhteys"); u8g2_display.setCursor(24, 78); u8g2_display.print("katkesi"); }
 }
 
 void drawChessBoard() {
+  if (chPhase == CH_MENU)    { drawChessMenu();    return; }
+  if (chPhase == CH_PAIRING) { drawChessPairing(); return; }
+  if (chPhase == CH_LOBBY)   { drawChessLobby();   return; }
+
   for(int r=0; r<8; r++) {
     for(int c=0; c<8; c++) {
       int x = c * 16;
       int y = r * 16;
       bool isLight = ((r + c) % 2 == 0);
       uint16_t bgColor = isLight ? CHESS_LIGHT : CHESS_DARK;
-      
+
       if(chessSelX == c && chessSelY == r) bgColor = CHESS_SEL;
       tft.fillRect(x, y, 16, 16, bgColor);
-      
+
       int p = chessBoard[r][c];
       if(p != 0) {
         String pieceStr = "";
@@ -66,21 +139,21 @@ void drawChessBoard() {
         if(type == 1) pieceStr = "P"; else if(type == 2) pieceStr = "N";
         else if(type == 3) pieceStr = "B"; else if(type == 4) pieceStr = "R";
         else if(type == 5) pieceStr = "Q"; else if(type == 6) pieceStr = "K";
-        
+
         // Offset to center letters (x + 2)
-        int textX = x + 2; 
+        int textX = x + 2;
         int textY = y + 13;
 
         if (p < 10) { // WHITE PIECES (Light Gray)
-          uint16_t lightGray = 0xD69A; 
-          u8g2_display.setForegroundColor(0x0000); 
+          uint16_t lightGray = 0xD69A;
+          u8g2_display.setForegroundColor(0x0000);
           u8g2_display.setCursor(textX + 1, textY + 1);
           u8g2_display.print(pieceStr);
           u8g2_display.setForegroundColor(lightGray);
           u8g2_display.setCursor(textX, textY);
           u8g2_display.print(pieceStr);
         } else { // BLACK PIECES
-          u8g2_display.setForegroundColor(0xFFFF); 
+          u8g2_display.setForegroundColor(0xFFFF);
           u8g2_display.setCursor(textX + 1, textY + 1);
           u8g2_display.print(pieceStr);
           u8g2_display.setForegroundColor(0x0000);
@@ -90,10 +163,12 @@ void drawChessBoard() {
       }
     }
   }
-  
+
   // Draw cursor
   tft.drawRect(chessCursorX * 16, chessCursorY * 16, 16, 16, COLOR_YELLOW);
   tft.drawRect(chessCursorX * 16 + 1, chessCursorY * 16 + 1, 14, 14, COLOR_YELLOW);
+
+  if (chPhase == CH_DISCONN) { drawChessDisconn(); return; }
 
   if(chessGameOver) {
     tft.fillRect(14, 40, 100, 48, COLOR_POPUP_BG);
@@ -126,15 +201,15 @@ bool isPseudoLegal(int sr, int sc, int dr, int dc) {
   int type = p % 10;
   int color = (p > 10) ? 1 : 0;
   int target = chessBoard[dr][dc];
-  
+
   if(target != 0) {
     int tColor = (target > 10) ? 1 : 0;
-    if(color == tColor) return false; 
+    if(color == tColor) return false;
   }
-  
+
   int drAbs = abs(dr - sr);
   int dcAbs = abs(dc - sc);
-  
+
   if(type == 1) { // Pawn
     int dir = (color == 0) ? -1 : 1;
     if(dc == sc && target == 0) {
@@ -152,7 +227,7 @@ bool isPseudoLegal(int sr, int sc, int dr, int dc) {
   if(type == 4) return (drAbs == 0 || dcAbs == 0) && isPathClear(sr, sc, dr, dc);
   if(type == 5) return ((drAbs == dcAbs) || (drAbs == 0 || dcAbs == 0)) && isPathClear(sr, sc, dr, dc);
   if(type == 6) return (drAbs <= 1 && dcAbs <= 1);
-  
+
   return false;
 }
 
@@ -179,7 +254,7 @@ bool inCheck(int color) {
       if(chessBoard[i][j] == kingVal) { kr = i; kc = j; break; }
     }
   }
-  if(kr == -1) return true; 
+  if(kr == -1) return true;
   return isUnderAttack(kr, kc, color);
 }
 
@@ -213,17 +288,120 @@ bool hasLegalMoves(int color) {
   return false;
 }
 
-void handleChessInput(char c) {
-  if(chessGameOver) {
-    if(c == 0x0D || c == 0x0A) setupChess();
+// --- Network serialization (whole board each move) ---
+void chSendState() {
+  uint8_t b[68];
+  b[0] = CH_NET_STATE;
+  b[1] = chOwnerIsWhite ? 1 : 0;
+  int k = 2;
+  for (int r = 0; r < 8; r++) for (int c = 0; c < 8; c++) b[k++] = (uint8_t)chessBoard[r][c];
+  b[66] = (uint8_t)chessTurn;
+  b[67] = chessGameOver ? 1 : 0;
+  commsSend(b, 68);
+}
+
+void chRecvState(const uint8_t* b) {
+  chOwnerIsWhite = (b[1] != 0);
+  chMyColor = commsLobbyOwner ? (chOwnerIsWhite ? 0 : 1) : (chOwnerIsWhite ? 1 : 0);
+  int k = 2;
+  for (int r = 0; r < 8; r++) for (int c = 0; c < 8; c++) chessBoard[r][c] = b[k++];
+  chessTurn = b[66];
+  chessGameOver = (b[67] != 0);
+  chessSelX = -1; chessSelY = -1;
+  if (chPhase == CH_LOBBY) { chessCursorX = 0; chessCursorY = 0; }
+  chPhase = CH_PLAY;
+  drawChessBoard();
+}
+
+// --- Game flow ---
+void setupChess() {            // launched from main menu -> show the chooser
+  chPhase = CH_MENU;
+  chMenuSel = 0;
+  drawChessBoard();
+}
+
+void chStartGame() {           // 2 players on one device
+  initChessBoard();
+  chessTurn = 0; chessCursorX = 0; chessCursorY = 0; chessSelX = -1; chessSelY = -1; chessGameOver = false;
+  chPhase = CH_PLAY;
+  drawChessBoard();
+}
+
+void chStartNetGame() {        // owner starts/restarts a network game
+  initChessBoard();
+  chessTurn = 0; chessCursorX = 0; chessCursorY = 0; chessSelX = -1; chessSelY = -1; chessGameOver = false;
+  chPhase = CH_PLAY;
+  drawChessBoard();
+  chSendState();
+}
+
+void chessOnExit() {           // called by the .ino when leaving via ESC
+  if (chMode == 1) { commsEnd(); chMode = 0; chPhase = CH_MENU; }
+}
+
+void updateChess() {           // called every loop; only does work in network mode
+  if (chMode != 1) return;
+  commsTick();
+
+  if ((commsPartnerLeft || commsLinkLost) && (chPhase == CH_LOBBY || chPhase == CH_PLAY)) {
+    chPhase = CH_DISCONN;
+    drawChessBoard();
     return;
   }
-  
+
+  if (chPhase == CH_PAIRING) {
+    if (commsPaired) { chPhase = CH_LOBBY; chMenuSel = 0; drawChessBoard(); }
+    else if (millis() - chPairStart > 30000) { chessOnExit(); setupChess(); }
+    return;
+  }
+
+  if (chPhase == CH_LOBBY || chPhase == CH_PLAY) {
+    uint8_t buf[80]; uint8_t len;
+    if (commsPoll(buf, &len) && len >= 68 && buf[0] == CH_NET_STATE) chRecvState(buf);
+  }
+}
+
+void handleChessInput(char c) {
+  if (chPhase == CH_MENU) {
+    if      (c == 0xB5) { if (chMenuSel > 0) chMenuSel--; drawChessBoard(); }
+    else if (c == 0xB6) { if (chMenuSel < 1) chMenuSel++; drawChessBoard(); }
+    else if (c == 0x0D || c == 0x0A) {
+      if (chMenuSel == 0) { chMode = 0; chStartGame(); }
+      else { chMode = 1; commsBegin(); chPhase = CH_PAIRING; chPairStart = millis(); drawChessBoard(); }
+    }
+    return;
+  }
+
+  if (chPhase == CH_PAIRING || chPhase == CH_DISCONN) return;   // ESC (global) leaves
+
+  if (chPhase == CH_LOBBY) {
+    if (commsLobbyOwner) {
+      if      (c == 0xB5) { chMenuSel = 0; drawChessBoard(); }
+      else if (c == 0xB6) { chMenuSel = 1; drawChessBoard(); }
+      else if (c == 0x0D || c == 0x0A) {
+        chOwnerIsWhite = (chMenuSel == 0);
+        chMyColor = chOwnerIsWhite ? 0 : 1;
+        chStartNetGame();
+      }
+    }
+    return;
+  }
+
+  // CH_PLAY
+  if(chessGameOver) {
+    if(c == 0x0D || c == 0x0A) {
+      if (chMode == 1) { if (commsLobbyOwner) chStartNetGame(); }
+      else chStartGame();
+    }
+    return;
+  }
+
   if(c == 0xB4) chessCursorX = (chessCursorX > 0) ? chessCursorX - 1 : 7;
   else if(c == 0xB7) chessCursorX = (chessCursorX < 7) ? chessCursorX + 1 : 0;
   else if(c == 0xB5) chessCursorY = (chessCursorY > 0) ? chessCursorY - 1 : 7;
   else if(c == 0xB6) chessCursorY = (chessCursorY < 7) ? chessCursorY + 1 : 0;
   else if(c == 0x0D || c == 0x0A) { // ENTER
+    if (chMode == 1 && chessTurn != chMyColor) { drawChessBoard(); return; }  // not your turn
     if(chessSelX == -1) {
       int p = chessBoard[chessCursorY][chessCursorX];
       if(p != 0 && ((p > 10 ? 1 : 0) == chessTurn)) {
@@ -237,15 +415,16 @@ void handleChessInput(char c) {
         if(tryMove(chessSelY, chessSelX, chessCursorY, chessCursorX)) {
           chessBoard[chessCursorY][chessCursorX] = chessBoard[chessSelY][chessSelX];
           chessBoard[chessSelY][chessSelX] = 0;
-          
+
           int movedPiece = chessBoard[chessCursorY][chessCursorX];
-          if(movedPiece == 1 && chessCursorY == 0) chessBoard[chessCursorY][chessCursorX] = 5; 
-          if(movedPiece == 11 && chessCursorY == 7) chessBoard[chessCursorY][chessCursorX] = 15; 
-          
+          if(movedPiece == 1 && chessCursorY == 0) chessBoard[chessCursorY][chessCursorX] = 5;
+          if(movedPiece == 11 && chessCursorY == 7) chessBoard[chessCursorY][chessCursorX] = 15;
+
           chessTurn = 1 - chessTurn;
           chessSelX = -1; chessSelY = -1;
-          
+
           if(!hasLegalMoves(chessTurn)) chessGameOver = true;
+          if (chMode == 1) chSendState();
         } else {
           int p = chessBoard[chessCursorY][chessCursorX];
           if(p != 0 && ((p > 10 ? 1 : 0) == chessTurn)) {

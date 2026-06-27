@@ -2,6 +2,9 @@
 
 Uusin päivitys ylimpänä.
 
+## 2026-06-28
+- **2 LAITETTA**: pelatkaa **Neljää suoraa** ja **Shakkia** langattomasti kahdella laitteella samassa huoneessa! Valitkaa molemmilla laitteilla "2 LAITETTA", niin laitteet löytävät toisensa.
+
 ## 2026-06-27
 - Uusi peli: **Neljän suora** – pelaa konetta vastaan (HELPPO tai VAIKEA) tai 2 pelaajaa (punainen vs. keltainen).
 - Uusi peli: **Tiiliseinä** – kimmota palloa melalla ja riko tiilet.

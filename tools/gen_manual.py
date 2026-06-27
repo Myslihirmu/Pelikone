@@ -64,7 +64,7 @@ games = [
      "Nuolet liikuttavat, ENTER paljastaa, V&Auml;LILY&Ouml;NTI tai L asettaa lipun."),
     ("FLAPPY BIRD", "Lenn&auml;t&auml; lintua putkien aukoista.",
      "Yl&ouml;s-nuoli r&auml;p&auml;ytt&auml;&auml; siipi&auml;."),
-    ("SHAKKI", "Tavallinen shakki kahdelle pelaajalle.",
+    ("SHAKKI", "Tavallinen shakki: valitse alussa <b>2 PELAAJAA</b> (yksi laite) tai <b>2 LAITETTA</b> (langaton).",
      "Nuolet liikuttavat. ENTER valitsee nappulan, sitten kohderuudun (sama ruutu peruu valinnan)."),
     ("BLACKJACK", "Yrit&auml; saada 21, mutta &auml;l&auml; mene yli.",
      "H = ota kortti (hit), S = j&auml;&auml; (stand)."),

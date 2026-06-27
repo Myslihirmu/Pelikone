@@ -186,7 +186,7 @@ void loop() {
     if (c != 0 && millis() - lastKeyTime >= 80) {
       lastKeyTime = millis();
       if (c == 0x09) { showBatteryPopup(); return; }  // TAB → battery
-      if (c == 0x1B) { if (currentMode == MODE_NELJANSUORA) neljanSuoraOnExit(); currentMode = MODE_MENU; u8g2_display.setFont(u8g2_font_helvB12_te); u8g2_display.setFontMode(1); drawMenu(menuPos); return; }  // ESC → menu
+      if (c == 0x1B) { if (currentMode == MODE_NELJANSUORA) neljanSuoraOnExit(); if (currentMode == MODE_CHESS) chessOnExit(); currentMode = MODE_MENU; u8g2_display.setFont(u8g2_font_helvB12_te); u8g2_display.setFontMode(1); drawMenu(menuPos); return; }  // ESC → menu
 
       if (currentMode == MODE_MENU) {
         if (c == 0xB6) {
@@ -244,6 +244,7 @@ void loop() {
   if (currentMode == MODE_PACMAN) updatePacman();
   if (currentMode == MODE_BREAKOUT) updateBreakout();
   if (currentMode == MODE_NELJANSUORA) updateNeljanSuora();
+  if (currentMode == MODE_CHESS) updateChess();
   checkBatteryWarning();
   if (millis() - lastKeyTime >= IDLE_SLEEP_MS) enterIdleSleep();
   delay(10);

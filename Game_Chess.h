@@ -21,11 +21,13 @@ bool chessGameOver = false;
 #define CH_NET_STATE 1
 
 int  chPhase = CH_MENU;
-int  chMode  = 0;          // 0 = 2 players (one device), 1 = network
+int  chMode  = 0;          // 0 = 2 players (one device), 1 = network, 2 = vs device (bot)
 int  chMenuSel = 0;
 int  chMyColor = 0;        // network: 0 white, 1 black
 bool chOwnerIsWhite = true;
 unsigned long chPairStart = 0;
+int  chBotDepth = 2;       // vs device: search depth
+int  chBotBlunder = 0;     // vs device: % chance of a random move (easy)
 
 // Board Colors
 #define CHESS_LIGHT 0xF7DE
@@ -56,9 +58,9 @@ void drawChessMenu() {
   u8g2_display.setForegroundColor(COLOR_GRAY);
   u8g2_display.setCursor(2, 18); u8g2_display.print("SHAKKI");
   tft.drawFastHLine(0, 24, 128, COLOR_GRAY);
-  const char* opt[2] = { "2 PELAAJAA", "2 LAITETTA" };
-  for (int i = 0; i < 2; i++) {
-    int y = 58 + i * 26;
+  const char* opt[4] = { "HELPPO", "VAIKEA", "2 PELAAJAA", "2 LAITETTA" };
+  for (int i = 0; i < 4; i++) {
+    int y = 44 + i * 22;
     if (i == chMenuSel) { tft.fillRect(0, y - 15, 128, 20, 0x18C3); u8g2_display.setForegroundColor(COLOR_GREEN); }
     else u8g2_display.setForegroundColor(COLOR_TEXT);
     u8g2_display.setCursor(6, y);
@@ -293,6 +295,99 @@ bool hasLegalMoves(int color) {
   return false;
 }
 
+// --- Chess bot (vs device): negamax + alpha-beta over pseudo-legal moves ---
+int chPieceVal(int type) {
+  switch (type) { case 1: return 100; case 2: return 320; case 3: return 330;
+                  case 4: return 500; case 5: return 900; default: return 0; }
+}
+
+int chEvalWhite() {
+  int s = 0;
+  for (int r = 0; r < 8; r++) for (int c = 0; c < 8; c++) {
+    int p = chessBoard[r][c];
+    if (!p) continue;
+    int v = chPieceVal(p % 10);
+    if (r >= 2 && r <= 5 && c >= 2 && c <= 5) v += 8;   // small centre bonus
+    s += (p < 10) ? v : -v;
+  }
+  return s;
+}
+
+int chEvalFor(int color) { return color == 0 ? chEvalWhite() : -chEvalWhite(); }
+
+int chApply(int sr, int sc, int dr, int dc, int& movedFrom) {
+  int captured = chessBoard[dr][dc];
+  movedFrom = chessBoard[sr][sc];
+  chessBoard[dr][dc] = movedFrom;
+  chessBoard[sr][sc] = 0;
+  if (movedFrom == 1 && dr == 0) chessBoard[dr][dc] = 5;         // promote to queen
+  else if (movedFrom == 11 && dr == 7) chessBoard[dr][dc] = 15;
+  return captured;
+}
+
+void chUndo(int sr, int sc, int dr, int dc, int captured, int movedFrom) {
+  chessBoard[sr][sc] = movedFrom;
+  chessBoard[dr][dc] = captured;
+}
+
+int chNegamax(int depth, int alpha, int beta, int color) {
+  if (depth == 0) return chEvalFor(color);
+  int best = -2000000;
+  for (int pass = 0; pass < 2; pass++)               // captures first, then quiet moves
+    for (int sr = 0; sr < 8; sr++) for (int sc = 0; sc < 8; sc++) {
+      int p = chessBoard[sr][sc];
+      if (!p || ((p > 10 ? 1 : 0) != color)) continue;
+      for (int dr = 0; dr < 8; dr++) for (int dc = 0; dc < 8; dc++) {
+        if ((chessBoard[dr][dc] != 0) != (pass == 0)) continue;
+        if (!isPseudoLegal(sr, sc, dr, dc)) continue;
+        int mf, cap = chApply(sr, sc, dr, dc, mf);
+        int score = (cap == 6 || cap == 16) ? (900000 + depth)   // king captured = win
+                                            : -chNegamax(depth - 1, -beta, -alpha, 1 - color);
+        chUndo(sr, sc, dr, dc, cap, mf);
+        if (score > best) best = score;
+        if (best > alpha) alpha = best;
+        if (alpha >= beta) return best;
+      }
+    }
+  return (best == -2000000) ? chEvalFor(color) : best;
+}
+
+// Bot is black (color 1): find and play its move.
+void chBotMove() {
+  if (chBotBlunder > 0 && (int)random(0, 100) < chBotBlunder) {  // easy: random legal move
+    int count = 0;
+    for (int sr = 0; sr < 8; sr++) for (int sc = 0; sc < 8; sc++) {
+      if (chessBoard[sr][sc] < 11) continue;
+      for (int dr = 0; dr < 8; dr++) for (int dc = 0; dc < 8; dc++) if (tryMove(sr, sc, dr, dc)) count++;
+    }
+    if (count == 0) return;
+    int pick = random(0, count), idx = 0;
+    for (int sr = 0; sr < 8; sr++) for (int sc = 0; sc < 8; sc++) {
+      if (chessBoard[sr][sc] < 11) continue;
+      for (int dr = 0; dr < 8; dr++) for (int dc = 0; dc < 8; dc++) {
+        if (!tryMove(sr, sc, dr, dc)) continue;
+        if (idx == pick) { int mf; chApply(sr, sc, dr, dc, mf); return; }
+        idx++;
+      }
+    }
+    return;
+  }
+
+  int bestScore = -2000000, bsr = -1, bsc = 0, bdr = 0, bdc = 0;
+  for (int sr = 0; sr < 8; sr++) for (int sc = 0; sc < 8; sc++) {
+    if (chessBoard[sr][sc] < 11) continue;                       // black pieces only
+    for (int dr = 0; dr < 8; dr++) for (int dc = 0; dc < 8; dc++) {
+      if (!tryMove(sr, sc, dr, dc)) continue;                    // legal root moves only
+      int mf, cap = chApply(sr, sc, dr, dc, mf);
+      int score = -chNegamax(chBotDepth - 1, -2000000, 2000000, 0);
+      chUndo(sr, sc, dr, dc, cap, mf);
+      if (bsr < 0 || score > bestScore) { bestScore = score; bsr = sr; bsc = sc; bdr = dr; bdc = dc; }
+    }
+    yield();   // keep the system responsive while thinking
+  }
+  if (bsr >= 0) { int mf; chApply(bsr, bsc, bdr, bdc, mf); }
+}
+
 // --- Network serialization (whole board each move) ---
 void chSendState() {
   uint8_t b[68];
@@ -369,10 +464,12 @@ void updateChess() {           // called every loop; only does work in network m
 void handleChessInput(char c) {
   if (chPhase == CH_MENU) {
     if      (c == 0xB5) { if (chMenuSel > 0) chMenuSel--; drawChessBoard(); }
-    else if (c == 0xB6) { if (chMenuSel < 1) chMenuSel++; drawChessBoard(); }
+    else if (c == 0xB6) { if (chMenuSel < 3) chMenuSel++; drawChessBoard(); }
     else if (c == 0x0D || c == 0x0A) {
-      if (chMenuSel == 0) { chMode = 0; chStartGame(); }
-      else { chMode = 1; commsBegin(); chPhase = CH_PAIRING; chPairStart = millis(); drawChessBoard(); }
+      if      (chMenuSel == 0) { chMode = 2; chBotDepth = 2; chBotBlunder = 30; chStartGame(); }  // HELPPO
+      else if (chMenuSel == 1) { chMode = 2; chBotDepth = 3; chBotBlunder = 0;  chStartGame(); }  // VAIKEA
+      else if (chMenuSel == 2) { chMode = 0; chStartGame(); }                                     // 2 PELAAJAA
+      else                     { chMode = 1; commsBegin(); chPhase = CH_PAIRING; chPairStart = millis(); drawChessBoard(); }  // 2 LAITETTA
     }
     return;
   }
@@ -436,6 +533,11 @@ void handleChessInput(char c) {
 
           if(!hasLegalMoves(chessTurn)) chessGameOver = true;
           if (chMode == 1) chSendState();
+          if (chMode == 2 && !chessGameOver) {   // bot (black) replies
+            chBotMove();
+            chessTurn = 1 - chessTurn;
+            if (!hasLegalMoves(chessTurn)) chessGameOver = true;
+          }
         } else {
           int p = chessBoard[chessCursorY][chessCursorX];
           if(p != 0 && ((p > 10 ? 1 : 0) == chessTurn)) {

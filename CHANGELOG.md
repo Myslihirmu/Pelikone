@@ -3,7 +3,8 @@
 Uusin päivitys ylimpänä.
 
 ## 2026-06-28
-- **2 LAITETTA**: pelatkaa **Neljää suoraa** ja **Shakkia** langattomasti kahdella laitteella samassa huoneessa! Valitkaa molemmilla laitteilla "2 LAITETTA", niin laitteet löytävät toisensa.
+- **2 LAITETTA**: pelatkaa langattomasti kahdella laitteella samassa huoneessa — **Neljä suoraa**, **Shakki** ja **Ristinolla**! Valitkaa molemmilla laitteilla "2 LAITETTA", niin laitteet löytävät toisensa.
+- **Shakki** konetta vastaan: uudet vaikeustasot **HELPPO** ja **VAIKEA**.
 
 ## 2026-06-27
 - Uusi peli: **Neljän suora** – pelaa konetta vastaan (HELPPO tai VAIKEA) tai 2 pelaajaa (punainen vs. keltainen).

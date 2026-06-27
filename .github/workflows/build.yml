@@ -39,6 +39,8 @@ jobs:
         run: |
           FQBN=$(arduino-cli board listall | grep -iE "FireBeetle 2 ESP32-C6" | awk '{print $NF}' | head -1)
           FQBN=${FQBN:-esp32:esp32:dfrobot_firebeetle2_esp32c6}
+          # Reclaim the unused 1.5MB SPIFFS: give the app 3MB instead of 1.2MB.
+          FQBN="${FQBN}:PartitionScheme=huge_app"
           echo "Using FQBN: $FQBN"
           # arduino-cli requires the sketch folder name to match the .ino name.
           # The repo checks out as "Pelikone", so stage the sketch in a matching folder.

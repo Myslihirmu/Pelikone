@@ -17,6 +17,7 @@
 #include "Game_Pacman.h"
 #include "Game_Breakout.h"
 #include "Game_NeljanSuora.h"
+#include "Comms.h"
 #include "esp_sleep.h"
 
 Adafruit_SSD1351 tft = Adafruit_SSD1351(128, 128, &SPI, TFT_CS, TFT_DC, TFT_RST);

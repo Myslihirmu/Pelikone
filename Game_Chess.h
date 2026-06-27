@@ -122,10 +122,13 @@ void drawChessBoard() {
   if (chPhase == CH_PAIRING) { drawChessPairing(); return; }
   if (chPhase == CH_LOBBY)   { drawChessLobby();   return; }
 
+  bool flip = (chMode == 1 && chMyColor == 1);   // black sees the board from its own side
   for(int r=0; r<8; r++) {
     for(int c=0; c<8; c++) {
-      int x = c * 16;
-      int y = r * 16;
+      int sx = flip ? (7 - c) : c;
+      int sy = flip ? (7 - r) : r;
+      int x = sx * 16;
+      int y = sy * 16;
       bool isLight = ((r + c) % 2 == 0);
       uint16_t bgColor = isLight ? CHESS_LIGHT : CHESS_DARK;
 
@@ -164,9 +167,11 @@ void drawChessBoard() {
     }
   }
 
-  // Draw cursor
-  tft.drawRect(chessCursorX * 16, chessCursorY * 16, 16, 16, COLOR_YELLOW);
-  tft.drawRect(chessCursorX * 16 + 1, chessCursorY * 16 + 1, 14, 14, COLOR_YELLOW);
+  // Draw cursor (mapped into the flipped view for the black player)
+  int curSX = flip ? (7 - chessCursorX) : chessCursorX;
+  int curSY = flip ? (7 - chessCursorY) : chessCursorY;
+  tft.drawRect(curSX * 16, curSY * 16, 16, 16, COLOR_YELLOW);
+  tft.drawRect(curSX * 16 + 1, curSY * 16 + 1, 14, 14, COLOR_YELLOW);
 
   if (chPhase == CH_DISCONN) { drawChessDisconn(); return; }
 
@@ -396,6 +401,12 @@ void handleChessInput(char c) {
     return;
   }
 
+  if (chMode == 1 && chMyColor == 1) {   // black's board is flipped -> invert arrows
+    if      (c == 0xB4) c = 0xB7;
+    else if (c == 0xB7) c = 0xB4;
+    else if (c == 0xB5) c = 0xB6;
+    else if (c == 0xB6) c = 0xB5;
+  }
   if(c == 0xB4) chessCursorX = (chessCursorX > 0) ? chessCursorX - 1 : 7;
   else if(c == 0xB7) chessCursorX = (chessCursorX < 7) ? chessCursorX + 1 : 0;
   else if(c == 0xB5) chessCursorY = (chessCursorY > 0) ? chessCursorY - 1 : 7;

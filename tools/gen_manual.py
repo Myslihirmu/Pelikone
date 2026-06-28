@@ -88,6 +88,9 @@ games = [
      "Valitse alussa konetta vastaan <b>HELPPO</b> tai <b>VAIKEA</b>, tai <b>2 PELAAJAA</b> (punainen vs. keltainen).",
      "Valikossa yl&ouml;s/alas + ENTER valitsee. Pelissä vasen/oikea valitsee sarakkeen, "
      "ENTER tai alas-nuoli pudottaa kiekon."),
+    ("TAMMI", "Ly&ouml; vastustajan nappulat hypp&auml;&auml;m&auml;ll&auml; vinottain. Perille p&auml;&auml;ssyt nappula muuttuu kuningattareksi. "
+     "Valitse alussa <b>HELPPO</b>/<b>VAIKEA</b> (konetta vastaan), <b>2 PELAAJAA</b> tai <b>2 LAITETTA</b> (langaton).",
+     "Nuolet liikuttavat, ENTER valitsee nappulan ja sitten kohderuudun. Ly&ouml;nti on pakollinen."),
 ]
 
 story = []

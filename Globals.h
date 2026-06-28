@@ -30,7 +30,7 @@
 #define COLOR_POPUP_BG  0x2104 
 
 // --- GAME SETTINGS ---
-#define NUM_GAMES 17
+#define NUM_GAMES 18
 
 // --- OS MODES ---
 enum Mode {
@@ -51,7 +51,8 @@ enum Mode {
   MODE_HIRSIPUU,
   MODE_PACMAN,
   MODE_BREAKOUT,
-  MODE_NELJANSUORA
+  MODE_NELJANSUORA,
+  MODE_TAMMI
 };
 extern Mode currentMode;
 

@@ -17,6 +17,7 @@
 #include "Game_Pacman.h"
 #include "Game_Breakout.h"
 #include "Game_NeljanSuora.h"
+#include "Game_Tammi.h"
 #include "Comms.h"
 #include "esp_sleep.h"
 
@@ -46,6 +47,7 @@ void refreshDisplay() {
   else if (currentMode == MODE_PACMAN)   drawPacman();
   else if (currentMode == MODE_BREAKOUT) drawBreakout();
   else if (currentMode == MODE_NELJANSUORA) drawNeljanSuora();
+  else if (currentMode == MODE_TAMMI) drawTammiBoard();
 }
 
 // --- Battery monitoring ---
@@ -186,7 +188,7 @@ void loop() {
     if (c != 0 && millis() - lastKeyTime >= 80) {
       lastKeyTime = millis();
       if (c == 0x09) { showBatteryPopup(); return; }  // TAB → battery
-      if (c == 0x1B) { if (currentMode == MODE_NELJANSUORA) neljanSuoraOnExit(); if (currentMode == MODE_CHESS) chessOnExit(); if (currentMode == MODE_TTT) tttOnExit(); currentMode = MODE_MENU; u8g2_display.setFont(u8g2_font_helvB12_te); u8g2_display.setFontMode(1); drawMenu(menuPos); return; }  // ESC → menu
+      if (c == 0x1B) { if (currentMode == MODE_NELJANSUORA) neljanSuoraOnExit(); if (currentMode == MODE_CHESS) chessOnExit(); if (currentMode == MODE_TTT) tttOnExit(); if (currentMode == MODE_TAMMI) tammiOnExit(); currentMode = MODE_MENU; u8g2_display.setFont(u8g2_font_helvB12_te); u8g2_display.setFontMode(1); drawMenu(menuPos); return; }  // ESC → menu
 
       if (currentMode == MODE_MENU) {
         if (c == 0xB6) {
@@ -213,6 +215,7 @@ void loop() {
           else if (menuPos == 14) { currentMode = MODE_PACMAN;    setupPacman(); }
           else if (menuPos == 15) { currentMode = MODE_BREAKOUT;  setupBreakout(); }
           else if (menuPos == 16) { currentMode = MODE_NELJANSUORA; setupNeljanSuora(); }
+          else if (menuPos == 17) { currentMode = MODE_TAMMI;       setupTammi(); }
         }
       }
       else if (currentMode == MODE_SANULI)      handleSanuliInput(c);
@@ -232,6 +235,7 @@ void loop() {
       else if (currentMode == MODE_PACMAN)   handlePacmanInput(c);
       else if (currentMode == MODE_BREAKOUT) handleBreakoutInput(c);
       else if (currentMode == MODE_NELJANSUORA) handleNeljanSuoraInput(c);
+      else if (currentMode == MODE_TAMMI) handleTammiInput(c);
     }
   }
 
@@ -246,6 +250,7 @@ void loop() {
   if (currentMode == MODE_NELJANSUORA) updateNeljanSuora();
   if (currentMode == MODE_CHESS) updateChess();
   if (currentMode == MODE_TTT) updateTTT();
+  if (currentMode == MODE_TAMMI) updateTammi();
   checkBatteryWarning();
   if (millis() - lastKeyTime >= IDLE_SLEEP_MS) enterIdleSleep();
   delay(10);

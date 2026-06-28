@@ -19,7 +19,8 @@ const String gameNames[NUM_GAMES] = {
   "HIRSIPUU",
   "PAC-MAN",
   "TIILISEINÄ",
-  "NELJÄN SUORA"
+  "NELJÄN SUORA",
+  "TAMMI"
 };
 
 void drawMenu(int selection) {
